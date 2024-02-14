@@ -1,0 +1,96 @@
+
+//+------------------------------------------------------------------+
+//|                                           Swing Sniper                                        |
+//|                                  Developed by Forex Robot Easy Team                          |
+//|                                     Developer's site: forexroboteasy.com                |
+//+------------------------------------------------------------------+
+
+// Global variables
+int lookBackPeriod = 10;    // Default look back period for moving average
+double multiplier = 1.5;    // Default multiplier for swing in point
+int channelShift = 20;      // Default channel shift value
+
+//+------------------------------------------------------------------+
+//| Custom indicator initialization function                         |
+//+------------------------------------------------------------------+
+int OnInit()
+{
+    // Set chart properties
+    ChartSetInteger(0, CHART_BRING_TO_TOP, true);
+    ChartSetInteger(0, CHART_COLOR_BACKGROUND, clrBlack);
+    
+    // Create indicator buffers
+    SetIndexBuffer(0, maBuffer);
+    SetIndexStyle(0, DRAW_LINE);
+    
+    // Set indicator colors
+    SetIndexLabel(0, 'Moving Average');
+    SetIndexDrawBegin(0, lookBackPeriod);
+    SetIndexEmptyValue(0, 0);
+    
+    // Set chart colors
+    ChartSetInteger(0, CHART_COLOR_CHART, clrBlack);
+    ChartSetInteger(0, CHART_COLOR_FOREGROUND, clrWhite);
+    ChartSetInteger(0, CHART_COLOR_GRID, clrGray);
+    ChartSetInteger(0, CHART_COLOR_VOLUME, clrGray);
+    ChartSetInteger(0, CHART_COLOR_STOP_LEVEL, clrRed);
+    
+    return(INIT_SUCCEEDED);
+}
+
+//+------------------------------------------------------------------+
+//| Custom indicator iteration function                              |
+//+------------------------------------------------------------------+
+int OnCalculate(const int rates_total,
+                const int prev_calculated,
+                const datetime &time[],
+                const double &open[],
+                const double &high[],
+                const double &low[],
+                const double &close[],
+                const long &tick_volume[],
+                const long &volume[],
+                const int &spread[])
+{
+    // Calculate moving average
+    for(int i = prev_calculated; i < rates_total; i++)
+    {
+        maBuffer[i] = iMA(NULL, 0, lookBackPeriod, 0, MODE_EMA, PRICE_CLOSE, i);
+    }
+    
+    // Determine trend direction based on moving average
+    int trendDirection = 0;
+    if(close[rates_total - 1] > maBuffer[rates_total - 1])
+        trendDirection = 1;         // Uptrend
+    else if(close[rates_total - 1] < maBuffer[rates_total - 1])
+        trendDirection = -1;        // Downtrend
+    
+    // Determine swing in point
+    double swingInPoint = close[rates_total - 1] + (multiplier * (high[rates_total - 1] - low[rates_total - 1]));
+    
+    // Adjust channel shift value
+    double channelShiftValue = swingInPoint + channelShift;
+    
+    // Visual cues for downtrend and uptrend
+    if(trendDirection == -1)
+    {
+        ChartSetInteger(0, CHART_COLOR_FOREGROUND, clrGold);
+        ChartSetInteger(0, CHART_COLOR_CHART, clrGold);
+    }
+    else if(trendDirection == 1)
+    {
+        ChartSetInteger(0, CHART_COLOR_FOREGROUND, clrLightBlue);
+        ChartSetInteger(0, CHART_COLOR_CHART, clrLightBlue);
+    }
+    
+    // Modify adjustable indicators
+    if(IsTesting() || IsOptimization())
+    {
+        lookBackPeriod = 20;    // Modify look back period during testing or optimization
+        multiplier = 2.0;       // Modify multiplier during testing or optimization
+        channelShift = 30;      // Modify channel shift value during testing or optimization
+    }
+    
+    return(rates_total);
+}
+
